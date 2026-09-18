@@ -1,11 +1,14 @@
 # KARS BYO Agent Studio
 
-本地运行的三运行时 Agent 工作台：Claude Code CLI、GitHub Copilot CLI 和 Codex CLI。
-在同一个页面创建 Agent、构建镜像、启动独立容器、配置 MCP / Skills，并通过共享 Chat Test 进行流式对话。
+**English** | [简体中文](README.zh.md)
 
-## 本地启动
+An Agent workspace for three runtimes: Claude Code CLI, GitHub Copilot CLI, and Codex CLI.
+Create Agents, configure MCP servers and Skills, and run streaming conversations from one UI.
+The project supports both local Docker development and an Azure deployment backed by AKS/KARS.
 
-需要 Docker Desktop（已启动）及 Node.js 22+。
+## Local setup
+
+Docker Desktop and Node.js 22 or later are required.
 
 ```bash
 npm ci
@@ -14,97 +17,112 @@ npm run images:build
 npm start
 ```
 
-打开 **http://127.0.0.1:4310**。也可以先启动页面，再逐个点击运行时的“构建镜像”。
-项目 `.npmrc` 使用 Microsoft package feed 的 `/npm/` 端点。
+Open **http://127.0.0.1:4310**. You may also start the UI first and build each runtime image
+from the application. The project `.npmrc` uses the Microsoft package feed npm endpoint.
 
-## 中文 / English
+For frontend development, run `npm run dev` and `npm run dev:web` in separate terminals,
+then open the address printed by Vite. Set `PORT` to change the backend port; the development
+proxy uses port 4310 by default.
 
-在页面顶部选择 **中文 / English** 即可切换界面语言，默认中文。语言选择会保存在当前
-浏览器中；也可以通过 `?lang=zh-CN` 或 `?lang=en` 指定语言。
-切换不会重载页面，不会清空未保存的 Agent 配置、凭据输入或当前对话。
-Agent 名称、用户指令、Skills 正文和模型回复保持原文，不会自动翻译。
-应用自己的提示和 API 错误支持中英文；Docker / 第三方诊断日志保持原始文本。
+## Language support
 
-长时间运行的文件生成任务会通过 Website 与 KARS runtime 两段心跳保持流连接。Website 不再
-提前终止仍在运行的任务；runtime 默认允许 Agent 最长执行 60 分钟，可通过 `CHAT_TIMEOUT_MS`
-调整为 1 分钟至 24 小时。Agent 在工作区
-生成的 Word、Excel、PowerPoint、PDF、HTML、Markdown 和常见图片会作为交付物显示在回复下方：
-原文件可直接下载；Office 文件会在 runtime 内转换为 PDF 进行在线预览；Markdown 会以格式化
-内容渲染；HTML 在不允许脚本执行的 sandbox iframe 中预览。
+Use the **中文 / English** selector in the top bar to switch the interface. Chinese is the
+default, and the browser remembers the selection. The `?lang=en` and `?lang=zh-CN` query
+parameters override the saved preference.
 
-KARS multi-CLI runtime 内置 Chromium 和 `curl`。`chrome`、`google-chrome`、
-`google-chrome-stable` 与 `chromium` 都会通过 KARS egress proxy 访问网络，不会绕过
-Sandbox 的网络治理策略。
+Changing languages does not reload the page or discard unsaved Agent configuration,
+credential input, or the current conversation. Agent names, instructions, Skill content,
+and model responses are kept in their original language. API clients can request localized
+application messages with `Accept-Language: en` or `Accept-Language: zh-CN`.
 
-如果浏览器与 Website 的流式连接临时中断，后台 Agent 不会被取消。页面会轮询当前 Session，
-在任务完成后自动恢复最终回复和交付物；只有用户主动点击停止才会取消 runtime 任务。
+The interface follows an Azure Portal-inspired layout with a top bar, resource navigation,
+compact command bar, light and dark themes, and responsive mobile styling. This visual style
+does not imply Azure Portal identity integration.
 
-runtime 会区分 CLI 的结构化工具输出和最终助手回复：工具事件默认最多 64 MiB，避免 PPT 等
-长任务因被抑制的工具结果超过 4 MiB 而失败；实际发送到浏览器的助手文本仍限制为 4 MiB。
-可通过 `CLI_STRUCTURED_OUTPUT_LIMIT_BYTES` 调整结构化输出预算。
+## Long-running tasks and deliverables
 
-Use the **中文 / English** selector in the top bar to switch the entire interface.
-Chinese is the default; the browser remembers your selection. `?lang=en` and
-`?lang=zh-CN` override it. Switching languages preserves unsaved configuration
-and the current conversation. Agent-authored content and model responses are not
-translated. API clients can select localized application feedback using the
-`Accept-Language: en` or `Accept-Language: zh-CN` header.
+The Website and KARS runtime send heartbeats every 15 seconds to keep long file-generation
+streams alive. The Website does not impose an early deadline on an active task. The runtime
+allows an Agent to run for 60 minutes by default; `CHAT_TIMEOUT_MS` can configure a limit
+between 1 minute and 24 hours.
 
-界面采用 Azure Portal 风格的顶部栏、左侧资源导航和紧凑命令栏。字体以 Segoe UI 为首选，
-不可用时使用系统字体回退；输入框与按钮使用紧凑的 Fluent 风格，支持明暗主题和移动端布局。
-这只是本地应用的视觉风格，不表示应用已连接 Azure Portal 或使用 Azure 身份认证。
+Files generated in an Agent workspace are surfaced below the assistant response:
 
-开发前端时，在两个终端分别执行 `npm run dev` 和 `npm run dev:web`，
-然后打开 Vite 输出的本地地址。`PORT` 可修改后端端口；开发代理默认使用 4310。
+| Type | Online preview | Download |
+|---|---|---|
+| Word (`.doc`, `.docx`) | Converted to PDF with LibreOffice | Original file |
+| Excel (`.xls`, `.xlsx`) | Converted to PDF with LibreOffice | Original file |
+| PowerPoint (`.ppt`, `.pptx`) | Converted to PDF with LibreOffice | Original file |
+| PDF | Native embedded viewer | Original file |
+| HTML | Sandboxed iframe without script permission | Original file |
+| SVG/PNG/GIF/JPG/JPEG/WebP | Native image preview | Original file |
+| Markdown (`.md`, `.markdown`) | Safe rendered GFM Markdown | Original file |
 
-## 创建 Agent
+The KARS multi-CLI runtime includes Chromium and `curl`. The `chrome`, `chromium`,
+`google-chrome`, and `google-chrome-stable` commands all use the KARS egress proxy and do
+not bypass Sandbox network governance.
 
-1. 选择运行时，填写名称、模型、Endpoint 和凭据。
-2. 填写 Agent 指令，按需启用工具、配置 MCP 和添加 Skills。
-3. 保存 Agent，构建对应镜像并启动容器，然后在共享 Chat Test 中新建 Session。
-4. Session 第一条指令使用 `@Agent名称` 选择 Agent；后续不写 `@` 时沿用当前 Agent，直到 `@` 另一个 Agent。
+If the browser-to-Website stream is interrupted, the Agent continues in the background.
+The UI polls the current Session and restores the final response and deliverables when the
+task finishes. Only an explicit **Stop generating** action cancels the runtime task.
 
-允许不填凭据保存草稿，但这不代表已获得模型访问权限。缺少凭据时，页面会明确提示并禁用
-Chat 发送。点击「配置凭据」即可补填；即使容器正在运行也能编辑，保存会移除旧容器，
-保留工作区与对话记录，随后重新启动即可。系统不会自动继承宿主机已有的 CLI 登录。
+Raw structured CLI output is accounted separately from the final assistant response.
+Suppressed tool events have a 64 MiB default budget so long-running PPT jobs are not killed
+when intermediate tool output crosses 4 MiB. User-visible assistant text remains capped at
+4 MiB. Configure the structured output budget with `CLI_STRUCTURED_OUTPUT_LIMIT_BYTES`.
 
-编辑已有 Agent：在左侧选择 Agent，点击顶部「编辑配置」，修改后点击顶部或表单底部
-「保存修改」。名称、凭据、指令、工具开关、MCP 和 Skills 均可更新；运行时类型创建后固定，
-需要更换运行时请创建新 Agent。再次点击当前 Agent 不会清空未保存的修改。
+## Creating an Agent
 
-| Runtime | 凭据 | 默认模型 | Endpoint |
+1. Select a runtime and enter a name, model, endpoint, and credential.
+2. Add Agent instructions and optionally enable tools, MCP servers, and Skills.
+3. Save the Agent, build and start its runtime, then create a Session in the shared chat.
+4. Start a Session with `@AgentName` to select an Agent. Later messages keep that Agent until
+   another explicit `@AgentName` mention switches the executor.
+
+An Agent draft may be saved without credentials, but chat remains unavailable until valid
+credentials are configured. Use **Configure credentials** to add them. In local mode, saving
+an updated configuration removes the old container while preserving its workspace and chat
+history; restart the runtime to apply the new configuration. Host CLI logins are never
+inherited automatically.
+
+To edit an existing Agent, select it from the sidebar, choose **Edit configuration**, make
+the changes, and save. Names, credentials, instructions, tool settings, MCP servers, and
+Skills can be updated. Runtime type is immutable after creation; create a new Agent to switch
+runtimes.
+
+| Runtime | Credential | Default model | Endpoint |
 |---|---|---|---|
-| Claude Code CLI | Anthropic 兼容服务 API Key | `claude-sonnet-4-6` | `https://api.anthropic.com` |
-| GitHub Copilot CLI | CLI 支持且具有 Copilot 权限的 GitHub Token | `gpt-6-astra` | 由 Copilot CLI 管理 |
-| Codex CLI | OpenAI 兼容服务 API Key | `gpt-5.4` | `https://api.openai.com/v1` |
+| Claude Code CLI | API key for an Anthropic-compatible service | `claude-sonnet-4-6` | `https://api.anthropic.com` |
+| GitHub Copilot CLI | GitHub token accepted by the CLI with Copilot access | `gpt-6-astra` | Managed by Copilot CLI |
+| Codex CLI | API key for an OpenAI-compatible service | `gpt-5.4` | `https://api.openai.com/v1` |
 
-Claude Endpoint 填服务根地址，CLI 会请求 Messages API。Codex Endpoint 填包含 `/v1`
-的 API 基址；服务必须支持 **Responses API**，只有 `/chat/completions` 的兼容服务不够。
-模型名称必须是对应服务实际提供的模型。Copilot 使用固定的 `gpt-6-astra`，
-不会在权限不足或模型不可用时偷偷切换模型。
+For Claude, enter the service root; the CLI calls the Messages API. For Codex, enter a base
+URL containing `/v1`; the provider must implement the Responses API, not only
+`/chat/completions`. Model names must exist on the configured provider. Copilot uses
+`gpt-6-astra` and does not silently fall back if the account lacks access.
 
-这里的 Copilot Token 指 CLI 支持的 GitHub OAuth Token（例如 `gho_...`），或具有
-**Copilot Requests** 账户权限的 fine-grained PAT（`github_pat_...`）。
-不支持 classic PAT（`ghp_...`），也不是任意 OpenAI Key；
-不能假定短期 Copilot 推理会话 Token 可以用于 CLI 登录。访问权限、组织策略和
-`gpt-6-astra` 可用性由 GitHub 账户决定。页面不会自动读取你主机上已有的 CLI 登录凭据。
+The Copilot credential must be a GitHub OAuth token supported by the CLI, or a fine-grained
+PAT whose account has **Copilot Requests** access. A classic PAT is not supported, and an
+arbitrary OpenAI key is not a Copilot credential. Access, organization policy, and model
+availability are controlled by the GitHub account.
 
-容器访问主机模型服务时，请使用 `http://host.docker.internal:<port>`，
-而不是 `localhost`（容器内的 localhost 指容器自身）。远程服务优先使用 HTTPS。
+From a local runtime container, connect to a model service running on the host with
+`http://host.docker.internal:<port>`, not `localhost`. Prefer HTTPS for remote services.
 
-## MCP、工具和 Skills
+## MCP, tools, and Skills
 
-默认使用受限工具配置。启用工具代表允许 CLI 在自己的容器内自主执行命令、读写工作区并调用
-配置的 MCP；这是明确的能力授权，不是只允许某一条命令的细粒度策略。
-关闭开关时不加载配置的 MCP，并使用对应 CLI 的限制配置；不同 CLI 的内置工具关闭能力
-并不等同，不能把“关闭开关”理解成额外的操作系统隔离边界。
-外部 MCP 服务拥有自己的权限与副作用，请只接入可信服务器。
+Agents use restricted tool settings by default. Enabling tools authorizes the CLI to run
+commands, modify its workspace, and invoke configured MCP servers inside its own runtime.
+This is a broad capability grant, not per-command approval. Disabling tools also disables
+configured MCP servers, but native restriction behavior differs between CLIs and is not an
+additional operating-system isolation boundary.
 
-页面中的远程 MCP 配置只需填写 Streamable HTTP Endpoint 和可选 MCP Key。Key 会作为
-Authorization Bearer 凭据保存，并自动转换为 Claude Code、GitHub Copilot CLI 或 Codex CLI
-各自的原生 MCP 配置，不需要手写 JSON。
+Only connect trusted external MCP servers because they have their own permissions and side
+effects. In the UI, a remote MCP server requires a Streamable HTTP endpoint and an optional
+MCP key. The key is written as an Authorization header in the selected CLI's native MCP
+configuration; users do not need to write JSON manually.
 
-以下是运行时内部兼容格式示例，页面用户不需要填写：
+The following examples show the internal compatibility format:
 
 ```json
 {
@@ -115,7 +133,7 @@ Authorization Bearer 凭据保存，并自动转换为 Claude Code、GitHub Copi
 }
 ```
 
-远程 MCP 使用 Streamable HTTP：
+Remote Streamable HTTP MCP:
 
 ```json
 {
@@ -123,36 +141,45 @@ Authorization Bearer 凭据保存，并自动转换为 Claude Code、GitHub Copi
     "type": "http",
     "url": "https://YOUR_MCP_HOST/mcp",
     "headers": {
-      "Authorization": "Bearer YOUR_MCP_TOKEN"
+      "Authorization": "Bearer YOUR_MCP_KEY"
     }
   }
 }
 ```
 
-stdio MCP 进程在 Agent 容器内运行，不是在宿主机运行。若需要额外程序，应扩展
-`containers/Dockerfile` 安装；只读根文件系统下不建议在会话中临时 `npx` 下载程序。
-Skill 名称使用小写字母、数字和连字符。每个 Skill 上传一个不超过 5 MiB 的 ZIP，`SKILL.md`
-可直接位于 ZIP 根目录，或位于 ZIP 中唯一的顶层文件夹内；macOS 生成的 `__MACOSX` 和
-`.DS_Store` 元数据不会影响该识别。ZIP 也可以包含脚本、模板和其他资源。上传后会安全解压至持久化 Agent 存储和
-KARS sandbox 的 `/sandbox/agents/<agent-id>/skills/<skill-name>/`；每次对话前会重新同步，
-避免 KARS Pod 重启造成文件丢失。运行时会分别映射到 Claude Code 的 `~/.claude/skills/`、
-GitHub Copilot CLI 的 `<workspace>/.github/skills/` 和 Codex CLI 的 `~/.agents/skills/`。
-系统会把用户填写的名称写入 `SKILL.md` frontmatter，确保三种 CLI 识别一致。Skill 是指令，
-不会自动授予工具权限。
-需要 CLI 主动读取并执行 Skill 工作流时，应启用工具；受限模式可能无法使用依赖工具的 Skill。
+stdio MCP processes run inside the Agent runtime, not on the host. Extend
+`containers/Dockerfile` when an additional executable is required; downloading tools with
+ad hoc `npx` calls is discouraged under a read-only root filesystem.
 
-镜像固定 CLI 版本为 Claude Code `2.1.263`、Copilot `1.0.83`、Codex `0.152.0`。
-Copilot 的受限工具模式使用该版本已验证的非空工具 allowlist；Codex 使用原生 feature
-配置和 bundled model metadata 限制工具，因此升级 CLI 后需要同步检查适配器。
-Codex 的 `exec --json` 以消息 / 工具事件粒度返回结果，不承诺每个 token 都单独推送。
+Skill names use lowercase letters, numbers, and hyphens. Upload each Skill as a ZIP archive
+of at most 5 MiB. `SKILL.md` may be at the ZIP root or inside its only top-level directory.
+macOS `__MACOSX` and `.DS_Store` metadata do not affect root detection. Archives may include
+scripts, templates, and other resources.
 
-## 架构与数据
+Uploaded Skills are safely extracted into persistent Agent storage and synchronized to
+`/sandbox/agents/<agent-id>/skills/<skill-name>/` before each KARS conversation. This avoids
+losing Skills when a KARS Pod restarts. The runtime maps them to:
 
-项目支持 Azure 托管部署和本地 Docker 开发两种运行模式。当前 Azure 部署由
-Azure Container Apps 承载 Website/control plane，由 AKS 上的 KARS Sandbox 执行 Agent。
-下图使用 Markdown 纯文本绘制，不依赖 Mermaid 或其他渲染插件。
+- Claude Code: `~/.claude/skills/`
+- GitHub Copilot CLI: `<workspace>/.github/skills/`
+- Codex CLI: `~/.agents/skills/`
 
-### Azure 部署架构
+The system writes the configured name into `SKILL.md` frontmatter so all three CLIs recognize
+the Skill consistently. A Skill provides instructions but does not grant tool permissions.
+Enable tools when a Skill must read files or execute a workflow.
+
+Runtime images pin Claude Code `2.1.263`, GitHub Copilot CLI `1.0.83`, and Codex CLI `0.152.0`.
+The Copilot restricted mode uses a non-empty tool allowlist validated for that version. Codex
+uses native feature settings and bundled model metadata. Revalidate adapters whenever a CLI
+version changes.
+
+## Architecture and data flow
+
+The project supports Azure-managed and local Docker modes. In Azure, the Website/control
+plane runs in Azure Container Apps and Agents execute in a KARS Sandbox on AKS. These diagrams
+use Markdown ASCII text and require no Mermaid renderer.
+
+### Azure deployment
 
 ```text
 +--------------------------- User device ----------------------------+
@@ -194,53 +221,50 @@ Azure Container Apps 承载 Website/control plane，由 AKS 上的 KARS Sandbox 
 +------------------------------ AKS --------------------------------+
 |                                                                   |
 |  KARS controller                                                  |
-|  +-------------------------+                                      |
+|  +--------------------------+                                     |
 |  | KarsSandbox reconciliation|                                    |
 |  | ToolPolicy + NetworkPolicy|                                    |
-|  +------------+------------+                                      |
+|  +------------+-------------+                                     |
 |               |                                                   |
 |               v                                                   |
-|  Namespace: kars-kars-sbx-coding                                  |
+|  KARS Sandbox Pod                                                  |
 |  +-------------------------------------------------------------+  |
-|  | KARS Sandbox Pod                                            |  |
-|  |                                                             |  |
-|  |  +-----------------------+   +----------------------------+  |  |
-|  |  | BYO Agent container   |   | KARS governance/runtime    |  |  |
-|  |  | UID 1000, read-only   |   | - inference-router         |  |  |
-|  |  | root filesystem       |   | - egress guard/proxy       |  |  |
-|  |  |                       |   | - network policy           |  |  |
-|  |  | Node runtime :8080    |<->| - tool policy              |  |  |
-|  |  |  + Claude Code CLI    |   +-------------+--------------+  |  |
-|  |  |  + Copilot CLI        |                 |                 |  |
-|  |  |  + Codex CLI          |                 |                 |  |
-|  |  |  + Chromium / curl    |                 |                 |  |
-|  |  |  + LibreOffice        |                 |                 |  |
-|  |  |  + MCP clients        |                 |                 |  |
-|  |  +-----------+-----------+                 |                 |  |
-|  |              |                             |                 |  |
-|  |              v                             |                 |  |
-|  |  /sandbox/agents/<agent-id>/               |                 |  |
-|  |  + workspace (generated deliverables)      |                 |  |
-|  |  + home (native CLI configuration)         |                 |  |
-|  |  + skills (synchronized ZIP Skills)        |                 |  |
-|  +--------------+-----------------------------|-----------------+  |
-+-----------------|-----------------------------|--------------------+
-                  |                             |
-                  | Artifact API                | Governed HTTPS egress
-                  |                             | via 127.0.0.1:8444
-                  v                             v
-       +----------------------+      +-----------------------------+
-       | Website artifact     |      | External services           |
-       | proxy and browser UI |      | - Model APIs                |
-       |                      |      | - GitHub Copilot            |
-       | Office -> PDF        |      | - Streamable HTTP MCP       |
-       | Markdown -> rendered |      | - Web pages/package feeds   |
-       | HTML -> sandboxed    |      +-----------------------------+
-       | Images/PDF -> native |
-       +----------------------+
+|  | +-----------------------+   +-----------------------------+  |  |
+|  | | BYO Agent container   |   | KARS governance/runtime     |  |  |
+|  | | UID 1000, read-only   |   | - inference router          |  |  |
+|  | | root filesystem       |   | - egress guard/proxy        |  |  |
+|  | |                       |   | - network/tool policy       |  |  |
+|  | | Node runtime :8080    |<->+--------------+--------------+  |  |
+|  | |  + Claude Code CLI    |                  |                 |  |
+|  | |  + Copilot CLI        |                  |                 |  |
+|  | |  + Codex CLI          |                  |                 |  |
+|  | |  + Chromium / curl    |                  |                 |  |
+|  | |  + LibreOffice        |                  |                 |  |
+|  | |  + MCP clients        |                  |                 |  |
+|  | +-----------+-----------+                  |                 |  |
+|  |             |                              |                 |  |
+|  |             v                              |                 |  |
+|  | /sandbox/agents/<agent-id>/                |                 |  |
+|  | + workspace (generated deliverables)       |                 |  |
+|  | + home (native CLI configuration)          |                 |  |
+|  | + skills (synchronized ZIP Skills)         |                 |  |
+|  +-------------+------------------------------|-----------------+  |
++----------------|------------------------------|--------------------+
+                 |                              |
+                 | Artifact API                 | Governed HTTPS egress
+                 v                              v
+      +----------------------+       +-----------------------------+
+      | Website artifact     |       | External services           |
+      | proxy and browser UI |       | - Model APIs                |
+      |                      |       | - GitHub Copilot            |
+      | Office -> PDF        |       | - Streamable HTTP MCP       |
+      | Markdown -> rendered |       | - Web pages/package feeds   |
+      | HTML -> sandboxed    |       +-----------------------------+
+      | Images/PDF -> native |
+      +----------------------+
 ```
 
-### 对话与交付物流
+### Chat and deliverable flow
 
 ```text
 User prompt
@@ -267,11 +291,11 @@ Website saves assistant response + artifact references
                                and Browser polls Session history
 ```
 
-CLI 原始结构化工具输出与最终助手文本分开计量。工具结果不会发送到浏览器或写入 Session；
-结构化事件默认最多 64 MiB，最终助手文本最多 4 MiB。所有交付物只能从对应 Agent 的
-workspace 读取，并经过路径、符号链接、扩展名、数量和文件大小检查。
+Tool results are excluded from browser output and Session persistence. Deliverables are read
+only from the matching Agent workspace and pass path traversal, symlink, extension, file count,
+and size checks.
 
-### 本地开发架构
+### Local development
 
 ```text
 Browser
@@ -293,72 +317,89 @@ Node control plane: 127.0.0.1:4310
                  +--> native tools + MCP + Skills
 ```
 
-更细的组件说明和流程图见 **[ARCHITECTURE.md](ARCHITECTURE.md)**；其中的图同样使用
-Markdown 纯文本框图。
+See [ARCHITECTURE.md](ARCHITECTURE.md) for additional component and workflow diagrams. It
+also uses Markdown ASCII diagrams rather than Mermaid.
 
-每个 Agent 使用独立容器、独立 Docker 工作区 volume 和独立运行时 HTTP Token。
-Runtime 的 8080 端口映射到主机随机 **loopback** 端口；控制台也只监听 `127.0.0.1`。
-容器采用 UID 1000、只读 rootfs、可写 `/sandbox` 与 `/tmp`、禁用 Linux capabilities、
-`no-new-privileges`、CPU / 内存 / PID 限额。不挂载 Docker socket 或宿主机工作目录。
+## Storage and security
 
-Agent 配置持久化在 `.data/agents/<id>/`；每次对话作为独立 Session 持久化在
-`.data/agents/.sessions/<session-id>/`，目录权限为 `0700`。
-主配置文件权限 `0600`；为容器 UID 1000 提供只读 bind mount 的运行时副本为 `0644`，
-仍位于 `0700` 的父目录内。凭据只在本机配置和容器运行时中使用，不进入镜像构建上下文，
-也不通过进程命令行传递。**这不是密钥保险库：本机用户、Docker 管理员及启用工具的
-Agent 能接触运行时凭据。MCP env / headers 同样应视为秘密配置。**
+In local mode, every Agent has an isolated container, workspace volume, and authenticated
+runtime HTTP token. Port 8080 maps to a random host loopback port, while the control plane
+listens only on `127.0.0.1`.
 
-Chat 使用流式 NDJSON；工具状态与最终回答分开显示。共享 Chat Test 使用 `@Agent名称`
-切换执行者，并在没有新 `@` 时沿用 Session 当前 Agent。会话历史由服务器按 Session
-持久化，每轮向 CLI 重放该 Session 完整的 user / assistant 历史，工作区文件跨容器重启保留。
-不是三种 CLI 原生 session ID 的互相转换。超过上下文长度上限会明确报错，不会静默丢弃历史。
-取消 Chat 会终止本轮 CLI 执行；停止 Agent 不会删除工作区。
+Runtime containers use UID 1000, a read-only root filesystem, writable `/sandbox` and `/tmp`,
+no Linux capabilities, `no-new-privileges`, and CPU, memory, and PID limits. They do not mount
+the Docker socket or host workspace.
 
-修改配置会移除旧容器，需重新启动以确保新配置生效。删除 Agent 会删除其配置，但保留已有
-Session 历史与工作区 volume，避免误删对话和任务产物；确实不再需要时手动删除相应命名 volume：
+Agent configuration is stored under `.data/agents/<id>/`, while Session history is stored at
+`.data/agents/.sessions/<session-id>/`. Directories use mode `0700`; primary configuration
+files use `0600`. A runtime copy mounted read-only for UID 1000 uses `0644` but remains below
+a `0700` parent directory.
+
+Credentials are used only by local configuration and the active runtime. They do not enter
+the image build context or process command line. **This is not a secret vault:** the local
+user, Docker administrators, and tool-enabled Agents can access runtime credentials. Treat
+MCP environment variables and headers as secrets as well.
+
+Chat uses streaming NDJSON. Tool status and assistant text are represented separately.
+The server persists full user/assistant Session history and replays it to the selected CLI.
+Workspace files survive runtime restarts. Sessions are portable transcripts, not converted
+native session IDs shared among the three CLIs. Oversized conversation context fails
+explicitly rather than being silently truncated.
+
+Updating local Agent configuration removes its old container so the new settings take effect.
+Deleting an Agent removes its configuration but retains existing Session history and workspace
+volume to avoid accidental data loss. Remove an unneeded workspace manually only after
+reviewing its exact name:
 
 ```bash
 docker volume ls --filter name=kars-byo-workspace-
-# Review the exact volume name before removing it:
 docker volume rm kars-byo-workspace-AGENT_UUID
 ```
 
-不要把控制台直接暴露到公网。它是单机、单用户开发工作台，没有多用户登录、RBAC、
-远程 Docker TLS 或面向生产的密钥管理。
+Do not expose the local control plane directly to the public internet. It is a single-user
+development workspace without multi-user login, application-level RBAC, remote Docker TLS,
+or production-grade secret management.
 
-## 与 Azure/kars BYO 的关系与边界
+## Azure/KARS BYO relationship and boundaries
 
-本项目参考上游 BYO quickstart 的镜像和 HTTP 适配模式，采用
-`org.kars.runtime.contract=v1` label、UID 1000、`/sandbox`、`/tmp`、8080 端口，
-校验 `SANDBOX_NAME` / `KARS_RUNTIME_CONTRACT_VERSION`。
+The runtime follows the upstream BYO quickstart image and HTTP adapter conventions:
+`org.kars.runtime.contract=v1`, UID 1000, writable `/sandbox` and `/tmp`, port 8080, and
+validation of `SANDBOX_NAME` and `KARS_RUNTIME_CONTRACT_VERSION`.
 
-项目保留 `local-direct` Docker 开发编排；该模式不是 `kars dev`，没有启动 KARS
-controller、inference-router 或 Kubernetes。Azure 部署则使用真正的 AKS KARS
-`KarsSandbox` BYO runtime，并启用 KARS network policy、egress proxy 和 ToolPolicy。
-当前 CLI 仍通过各自原生协议连接配置的模型服务；不要把 BYO runtime 接入等同于已经采用
-KARS 的全部可选能力，例如 Token Budget、Content Safety、完整 `/agt/evaluate` 工具评估
-或跨 Agent 的 AgentMesh 编排。
-镜像 label / CR 的 strict admission 通过并不代表已实现整个 runtime plugin contract。
+The project retains a `local-direct` Docker development mode. It is not `kars dev` and does
+not start the KARS controller, inference router, or Kubernetes. The Azure deployment uses an
+AKS KARS `KarsSandbox` BYO runtime with KARS NetworkPolicy, egress proxy, and ToolPolicy.
 
-上游 KARS 的 BYO 接入用 `KarsSandbox.spec.runtime.kind: BYO` 和
-`spec.runtime.byo.image / contractVersion` 选择镜像。若迁移到真正的 kind / AKS KARS：
+The CLIs still use their native protocols to reach configured model services. A BYO runtime
+integration does not imply that every optional KARS capability is enabled, such as Token
+Budget, Content Safety, complete `/agt/evaluate` evaluation for every native tool call, or
+cross-Agent AgentMesh orchestration. Passing strict image-label or CR admission alone does
+not implement the entire runtime plugin contract.
 
-1. 先部署上游 KARS，启用 `controller.byoStrict=true`，推送三个镜像到自己的 registry。
-2. 根据对应版本的 CRD 与 controller 实现，为 wrapper 挂载 Agent 配置及可写工作区。
-3. Claude / Codex 推理分别改为 router 的 `/anthropic` 和 `/v1` 基址，凭据只交给 router。
-4. 为 CLI 的每次工具执行接入 `/agt/evaluate`，MCP 经 router `/mcp`；
-   不可仅改 Endpoint 就宣称实现了完整治理。
-5. Copilot CLI 原生 Token 登录与其网络调用需单独验证受控 egress / proxy 的兼容性。
-   不应假定它与一个可以任意替换 OpenAI base URL 的客户端相同。
+Upstream KARS selects a BYO image with `KarsSandbox.spec.runtime.kind: BYO` and
+`spec.runtime.byo.image / contractVersion`. When adapting another deployment:
 
-这些集群接线仅用于 Azure 部署，不会在 `local-direct` 模式中自动启动。
+1. Deploy upstream KARS, enable `controller.byoStrict=true`, and push the runtime images to
+   your registry.
+2. Follow the matching CRD and controller implementation when mounting Agent configuration
+   and writable workspaces.
+3. Route Claude and Codex inference through the router `/anthropic` and `/v1` endpoints when
+   adopting zero-credential routing.
+4. Integrate `/agt/evaluate` for each CLI tool execution and route MCP through `/mcp` before
+   claiming complete tool governance.
+5. Validate controlled egress and proxy compatibility separately for Copilot CLI native token
+   authentication and network traffic.
 
-参考：
+These cluster integrations apply only to the Azure deployment and do not start automatically
+in `local-direct` mode.
+
+References:
 
 - https://github.com/Azure/kars
 - https://github.com/Azure/kars/tree/main/examples/byo-quickstart
 - https://github.com/Azure/kars/blob/main/docs/runtimes/CONTRACT.md
 - https://github.com/Azure/kars/blob/main/docs/operations/byo-strict.md
 
-上游 quickstart README 使用 `k8s/karssandbox.yaml`，但当前 main 中示例文件仍名为
-`k8s/clawsandbox.yaml`；应以实际文件及内容为准，不依赖过时路径。
+The upstream quickstart README refers to `k8s/karssandbox.yaml`, while the example file on the
+current main branch may still be named `k8s/clawsandbox.yaml`. Use the actual repository
+contents instead of relying on a potentially stale path.
