@@ -2,6 +2,8 @@
 
 [English](README.md) | **简体中文**
 
+![arch](./imgs/arch.png)
+
 本地运行的三运行时 Agent 工作台：Claude Code CLI、GitHub Copilot CLI 和 Codex CLI。
 在同一个页面创建 Agent、构建镜像、启动独立容器、配置 MCP / Skills，并通过共享 Chat Test 进行流式对话。
 

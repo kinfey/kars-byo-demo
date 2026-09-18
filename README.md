@@ -2,6 +2,8 @@
 
 **English** | [简体中文](README.zh.md)
 
+![arch](./imgs/arch.png)
+
 An Agent workspace for three runtimes: Claude Code CLI, GitHub Copilot CLI, and Codex CLI.
 Create Agents, configure MCP servers and Skills, and run streaming conversations from one UI.
 The project supports both local Docker development and an Azure deployment backed by AKS/KARS.
