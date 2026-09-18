@@ -1,0 +1,24 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: aca-kars-chat
+  namespace: kars-kars-sbx-coding
+rules:
+  - apiGroups: [""]
+    resources: ["services/proxy"]
+    resourceNames: ["kars-cli-runtime", "http:kars-cli-runtime:8080"]
+    verbs: ["get", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aca-kars-chat
+  namespace: kars-kars-sbx-coding
+subjects:
+  - kind: User
+    name: 8872d966-d14b-4347-8dd1-d140e105948a
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: aca-kars-chat
+  apiGroup: rbac.authorization.k8s.io

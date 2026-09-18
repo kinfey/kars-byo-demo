@@ -1,0 +1,67 @@
+apiVersion: kars.azure.com/v1alpha1
+kind: KarsSandbox
+metadata:
+  name: kars-sbx-coding
+  namespace: kars-system
+spec:
+  governance:
+    enabled: true
+    registryMode: local
+    toolPolicyRef:
+      name: kars-sbx-coding-toolpolicy
+    trustThreshold: 500
+  inferenceRef:
+    name: kars-sbx-coding-inference
+  networkPolicy:
+    defaultDeny: true
+    egressMode: Learn
+  runtime:
+    kind: BYO
+    byo:
+      image: akskinfeykarsbyoafqmxw.azurecr.io/kars-byo/multi-cli:20260918-output1
+      contractVersion: v1
+      command:
+        - node
+        - /opt/kars-byo/runtime/kars-copilot-server.mjs
+      env:
+        - name: PORT
+          value: "8080"
+        - name: CHAT_TIMEOUT_MS
+          value: "3600000"
+        - name: CLI_STRUCTURED_OUTPUT_LIMIT_BYTES
+          value: "67108864"
+        - name: HTTP_PROXY
+          value: http://127.0.0.1:8444
+        - name: HTTPS_PROXY
+          value: http://127.0.0.1:8444
+        - name: ALL_PROXY
+          value: http://127.0.0.1:8444
+        - name: NO_PROXY
+          value: 127.0.0.1,localhost
+  sandbox:
+    isolation: enhanced
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    seccompProfile: RuntimeDefault
+    writablePaths:
+      - /sandbox
+      - /tmp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kars-cli-runtime
+  namespace: kars-kars-sbx-coding
+  labels:
+    kars.azure.com/component: sandbox
+    kars.azure.com/sandbox: kars-sbx-coding
+spec:
+  type: ClusterIP
+  selector:
+    kars.azure.com/sandbox: kars-sbx-coding
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080

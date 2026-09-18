@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (() => {
+        const param = new URLSearchParams(window.location.search).get("scoutTheme");
+        const theme =
+          param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="本地 Docker BYO Agent Studio：配置 Claude、Copilot 与 Codex，连接你的模型并进行真实对话。" />
+    <title>智能体工作台 · KARS BYO</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

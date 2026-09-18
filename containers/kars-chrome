@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+
+proxy="${HTTPS_PROXY:-${HTTP_PROXY:-http://127.0.0.1:8444}}"
+
+exec /usr/bin/chromium \
+  --no-sandbox \
+  --disable-dev-shm-usage \
+  --proxy-server="$proxy" \
+  "$@"

@@ -1,0 +1,64 @@
+location: swedencentral
+name: aca-kinfey-kars-byo-app
+type: Microsoft.App/containerApps
+identity:
+  type: UserAssigned
+  userAssignedIdentities:
+    /subscriptions/4498459e-01d5-4a3f-b07e-8f1f36598c16/resourceGroups/rg-kinfey/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-aca-kars-byo: {}
+properties:
+  managedEnvironmentId: /subscriptions/4498459e-01d5-4a3f-b07e-8f1f36598c16/resourceGroups/rg-kinfey/providers/Microsoft.App/managedEnvironments/cae-kinfey-lab-demo
+  configuration:
+    activeRevisionsMode: Single
+    ingress:
+      external: true
+      targetPort: 4310
+      transport: auto
+      allowInsecure: false
+    registries:
+      - server: akskinfeykarsbyoafqmxw.azurecr.io
+        identity: /subscriptions/4498459e-01d5-4a3f-b07e-8f1f36598c16/resourceGroups/rg-kinfey/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-aca-kars-byo
+  template:
+    containers:
+      - name: website
+        image: akskinfeykarsbyoafqmxw.azurecr.io/kars-byo-website:20260918-recovery1
+        env:
+          - name: HOST
+            value: 0.0.0.0
+          - name: PORT
+            value: "4310"
+          - name: DATA_DIR
+            value: /data/agents
+          - name: STORE_MODELESS
+            value: "1"
+          - name: DEPLOYMENT_MODE
+            value: kars-aks
+          - name: PUBLIC_ORIGIN
+            value: https://aca-kinfey-kars-byo-app.ambitiousplant-d85dbd4f.swedencentral.azurecontainerapps.io
+          - name: KARS_CHAT_ENDPOINT
+            value: https://aks-kinfey-kars-byo-xu8gztzp.hcp.swedencentral.azmk8s.io/api/v1/namespaces/kars-kars-sbx-coding/services/http:kars-cli-runtime:8080/proxy/chat
+          - name: AZURE_CLIENT_ID
+            value: 04a054bc-10de-4d16-91d2-47a5c9140615
+          - name: KARS_MODEL
+            value: gpt-6-astra
+          - name: KARS_CA_CERT_FILE
+            value: /etc/kars/aks-api-ca.crt
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+        volumeMounts:
+          - volumeName: data
+            mountPath: /data
+          - volumeName: aks-api-ca
+            mountPath: /etc/kars
+    scale:
+      minReplicas: 1
+      maxReplicas: 1
+    volumes:
+      - name: data
+        storageType: AzureFile
+        storageName: karsbyodata
+      - name: aks-api-ca
+        storageType: Secret
+        secrets:
+          - secretRef: aks-api-ca
+            path: aks-api-ca.crt
